@@ -444,29 +444,43 @@
     <script>
         // Get API URL from URL parameter, localStorage, or use default
         function getApiBaseUrl() {
+            let apiUrl = null;
+            
             // Check URL parameter first (e.g., ?api_url=https://your-ngrok-url.ngrok.io)
             const urlParams = new URLSearchParams(window.location.search);
             const apiUrlParam = urlParams.get('api_url');
             if (apiUrlParam) {
+                apiUrl = apiUrlParam;
                 // Store in localStorage for future use
-                localStorage.setItem('api_base_url', apiUrlParam);
-                return apiUrlParam;
+                localStorage.setItem('api_base_url', apiUrl);
+            } else {
+                // Check localStorage
+                const storedUrl = localStorage.getItem('api_base_url');
+                if (storedUrl) {
+                    apiUrl = storedUrl;
+                } else {
+                    // Default to localhost for development
+                    apiUrl = 'http://localhost:8000';
+                }
             }
             
-            // Check localStorage
-            const storedUrl = localStorage.getItem('api_base_url');
-            if (storedUrl) {
-                return storedUrl;
-            }
-            
-            // Default to localhost for development
-            return 'http://localhost:8000';
+            // Normalize URL: remove trailing slashes
+            return apiUrl.replace(/\/+$/, '');
         }
         
         const API_BASE_URL = getApiBaseUrl();
         const chatMessages = document.getElementById('chatMessages');
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
+        
+        // Helper function to construct API URLs safely (handles trailing slashes)
+        function getApiUrl(endpoint) {
+            // Remove leading slash from endpoint if present, then add it back
+            const cleanEndpoint = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
+            // Ensure base URL doesn't have trailing slash
+            const cleanBase = API_BASE_URL.replace(/\/+$/, '');
+            return `${cleanBase}${cleanEndpoint}`;
+        }
         
         // Log API URL for debugging
         console.log('API Base URL:', API_BASE_URL);
@@ -490,7 +504,7 @@
             const statusText = document.getElementById('apiStatusText');
             
             try {
-                const response = await fetch(`${API_BASE_URL}/api/health`, {
+                const response = await fetch(getApiUrl('/api/health'), {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
@@ -600,7 +614,7 @@
 
             try {
                 // Send request to API
-                const response = await fetch(`${API_BASE_URL}/api/chat`, {
+                const response = await fetch(getApiUrl('/api/chat'), {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
